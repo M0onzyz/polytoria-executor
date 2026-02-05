@@ -171,7 +171,7 @@ DWORD WINAPI MainThread(LPVOID param)
     }
 
     free(buffer);
-
+    U::ThreadDetach();
     return 0;
 }
 
