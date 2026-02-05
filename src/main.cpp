@@ -80,19 +80,12 @@ void RunLuaScript(const std::string& script)
 DWORD WINAPI MainThread(LPVOID param)
 {
     // Full working executor
-    
+
     HANDLE g = GetModuleHandleA("GameAssembly.dll");
     U::Init(g, U::Mode::Il2Cpp);
     U::ThreadAttach();
 
-    const auto script = R"(
-        while true do
-            print("Hello from Lua!")
-            wait(1000)
-        end
-    )";
-
-    RunLuaScript(script);
+    
 
     return 0;
 }

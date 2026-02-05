@@ -26,8 +26,14 @@ xmake
 
 ### Download
 
+#### Build from source
+
+#### Download standalone dll
 Download latest DLL from Github Actions
 
+#### Download Pre-Built
+
+![alt text](image.png)
 
 # Community
 https://discord.gg/vscvprztP3
