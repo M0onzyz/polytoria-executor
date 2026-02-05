@@ -2,6 +2,8 @@
 #include <atomic>
 #include "unity.hpp"
 
+#define PIPE_NAME "\\\\.\\pipe\\PolytoriaPipe"
+
 std::atomic<bool> g_Running = true;
 HANDLE g_ShutdownEvent = NULL;
 
@@ -85,7 +87,90 @@ DWORD WINAPI MainThread(LPVOID param)
     U::Init(g, U::Mode::Il2Cpp);
     U::ThreadAttach();
 
-    
+    char* buffer = (char*)malloc(9999999);
+    if (!buffer) return 1;
+
+    while (g_Running)
+    {
+        HANDLE hPipe = CreateNamedPipeA(
+            PIPE_NAME,
+            PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            PIPE_UNLIMITED_INSTANCES,
+            9999999,
+            9999999,
+            0,
+            NULL
+        );
+
+        if (hPipe == INVALID_HANDLE_VALUE)
+        {
+            if (!g_Running) break;
+            Sleep(100);
+            continue;
+        }
+
+        OVERLAPPED overlapped = { 0 };
+        overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+        if (!overlapped.hEvent)
+        {
+            CloseHandle(hPipe);
+            break;
+        }
+
+        BOOL connected = ConnectNamedPipe(hPipe, &overlapped);
+        if (!connected)
+        {
+            DWORD err = GetLastError();
+            if (err == ERROR_IO_PENDING)
+            {
+                HANDLE waitHandles[2] = { overlapped.hEvent, g_ShutdownEvent };
+                DWORD waitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+                if (waitResult == WAIT_OBJECT_0)
+                {
+                    connected = TRUE;
+                }
+                else
+                {
+                    CancelIo(hPipe);
+                    connected = FALSE;
+                }
+            }
+            else if (err == ERROR_PIPE_CONNECTED)
+            {
+                connected = TRUE;
+            }
+        }
+
+        if (connected && g_Running)
+        {
+            DWORD bytesRead;
+            ResetEvent(overlapped.hEvent);
+            if (ReadFile(hPipe, buffer, 9999998, &bytesRead, &overlapped) || GetLastError() == ERROR_IO_PENDING)
+            {
+                HANDLE waitHandles[2] = { overlapped.hEvent, g_ShutdownEvent };
+                DWORD waitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+                if (waitResult == WAIT_OBJECT_0)
+                {
+                    if (GetOverlappedResult(hPipe, &overlapped, &bytesRead, FALSE))
+                    {
+                        buffer[bytesRead] = '\0';
+                        RunLuaScript(std::string(buffer));
+                    }
+                }
+                else
+                {
+                    CancelIo(hPipe);
+                }
+            }
+        }
+
+        DisconnectNamedPipe(hPipe);
+        CloseHandle(hPipe);
+        CloseHandle(overlapped.hEvent);
+    }
+
+    free(buffer);
 
     return 0;
 }
