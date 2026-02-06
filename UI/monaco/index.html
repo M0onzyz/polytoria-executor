@@ -71,7 +71,15 @@
             });
 
             editor = monaco.editor.create(document.getElementById('container'), {
-                value: "--// PolyHack Executor \\\\--\nprint(\"Hello world!\")",
+                value: `game["Players"].LocalPlayer.Size = Vector3.new(5, 5, 5) 
+
+while wait() do
+    game['Players'].LocalPlayer.MaxHealth = 676767
+    game['Players'].LocalPlayer.Health = 676767
+end
+
+game["Players"].LocalPlayer.WalkSpeed = 100
+game["Players"].LocalPlayer.JumpPower = 100`,
                 language: 'lua',
                 theme: "roblox-dark",
                 folding: true,
